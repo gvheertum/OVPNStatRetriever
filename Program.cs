@@ -2,6 +2,8 @@
 
 
 // Get the parameter defining the server to query
+using System.Diagnostics;
+
 var serverIp = args.Length > 0 ? args[0] : null;
 if(string.IsNullOrWhiteSpace(serverIp)) { EchoOptions(); return; }
 QueryServer(serverIp);
@@ -15,11 +17,26 @@ void QueryServer(string serverIp)
 { 
     try
     {
-        TelnetClient tc = new TelnetClient("192.168.123.11", 5555);
-        Console.WriteLine(tc.Receive());
+        // Connect and retrieve
+        TelnetClient tc = new TelnetClient(serverIp, 5555);
+        var welcomeMessage = tc.Receive();
+        Debug.WriteLine($"Connected: {welcomeMessage}");
         tc.StartSend("status");
-        Console.WriteLine(tc.Receive());
-        Console.WriteLine("Einde!");
+        var receivedData = tc.Receive();
+        Debug.WriteLine($"Received: {receivedData}");
+        
+        // Parse the information
+        var connections = new OVPNStreamParser().GetConnectionsFromStream(receivedData);
+        System.Console.WriteLine($"Found {connections.Count()} connections");
+        foreach(var c in connections) 
+        {
+            System.Console.WriteLine($"*****");
+            System.Console.WriteLine($"Common Name:     {c.CommonName}");
+            System.Console.WriteLine($"Origin:          {c.RealAdress}");
+            System.Console.WriteLine($"Sent/Received:   {c.BytesSent}/{c.BytesReceived}");
+            System.Console.WriteLine($"Connected since: {c.ConnectedSince}");
+            System.Console.WriteLine($"*****");
+        }
     }
     catch (Exception ex)
     {
